@@ -40,16 +40,3 @@ jobs:
           git pull origin main --rebase || true
           git push --force
 
-      - name: Send Daily Digest via Email
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: 🛸 Daily UAP Intelligence Digest
-          to: ${{ secrets.MAIL_RECIPIENT }}
-          from: UFO Alert Bot
-          html_body: file://ufo_daily_digest.md
-          convert_markdown: true
