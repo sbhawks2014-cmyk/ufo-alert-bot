@@ -5,9 +5,6 @@ on:
     - cron: '0 6 * * *'
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   run-digest:
     runs-on: ubuntu-latest
@@ -15,8 +12,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,12 +26,8 @@ jobs:
       - name: Run UFO Fetcher & Gemini Summarizer
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python fetch_and_summarize.py
-
-      - name: Commit and push generated Markdown report
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add ufo_daily_digest.md
-          git commit -m "Auto-generate daily UAP summary digest" || exit 0
-          git push
+          python fetch_and_summarize.py
+          echo "=================== DAILY UAP DIGEST ==================="
+          cat ufo_daily_digest.md || true
+          echo "========================================================"
