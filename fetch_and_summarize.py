@@ -61,7 +61,7 @@ def summarize_with_gemini(reports):
     """
 
     response = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-3.6-flash',
         contents=prompt
     )
     return response.text
@@ -74,3 +74,6 @@ if __name__ == "__main__":
         f.write(summary)
         
     print("Digest with Media Extraction successfully generated!")
+
+        
+
