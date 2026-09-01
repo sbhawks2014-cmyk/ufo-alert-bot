@@ -5,7 +5,8 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from google import genai
 
-# 1. Fetch public UFO report RSS feed
+FEED_URL = "https://nuforc.org/feed/"
+
 FEED_URL = "https://nuforc-sightings-database-api.herokuapp.com/sightings/today/rss.xml"
 
 def fetch_ufo_reports():
