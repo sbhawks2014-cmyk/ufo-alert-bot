@@ -39,4 +39,3 @@ jobs:
           git commit -m "Auto-generate daily UAP summary digest" || exit 0
           git pull origin main --rebase || true
           git push --force
-
