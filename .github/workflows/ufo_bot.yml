@@ -1,1 +1,55 @@
-ufo_bot.yml
+name: UFO Daily Digest Generator
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-digest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install google-genai
+
+      - name: Run UFO Fetcher & Gemini Summarizer
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python fetch_and_summarize.py
+
+      - name: Commit and push generated Markdown report
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add ufo_daily_digest.md
+          git commit -m "Auto-generate daily UAP summary digest" || exit 0
+          git pull origin main --rebase || true
+          git push --force
+
+      - name: Send Daily Digest via Email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: 🛸 Daily UAP Intelligence Digest
+          to: ${{ secrets.MAIL_RECIPIENT }}
+          from: UFO Alert Bot
+          html_body: file://ufo_daily_digest.md
+          convert_markdown: true
