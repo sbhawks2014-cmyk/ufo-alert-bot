@@ -1,33 +1,54 @@
-name: UFO Daily Digest Generator
+import os
+import time
+import requests
+import xml.etree.ElementTree as ET
+from google import genai
 
-on:
-  schedule:
-    - cron: '0 6 * * *'
-  workflow_dispatch:
+# Append a timestamp parameter to bypass server-side RSS feed caching
+RSS_URL = f"https://nuforc.org/feed/?cache_bust={int(time.time())}"
 
-jobs:
-  run-digest:
-    runs-on: ubuntu-latest
+def fetch_nuforc_feed():
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    response = requests.get(RSS_URL, headers=headers)
+    response.raise_for_status()
+    
+    root = ET.fromstring(response.content)
+    items = []
+    
+    for item in root.findall('.//item'):
+        title = item.findtext('title', default='No Title')
+        description = item.findtext('description', default='No Description')
+        pub_date = item.findtext('pubDate', default='No Date')
+        items.append(f"Date: {pub_date}\nTitle: {title}\nDetails: {description}\n---")
+    
+    # Grab the top 15 most recent reports
+    return "\n".join(items[:15])
 
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+def generate_summary(feed_data):
+    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+    
+    prompt = f"""
+    You are an expert UAP/UFO intelligence analyst. Below are the raw RSS entries fetched live from NUFORC.
+    
+    Analyze the entries and generate a clear, structured daily report in Markdown format.
+    Focus on:
+    1. Highlight any entries reported within the last 24-48 hours.
+    2. Group sightings by geographic location or recurring shape patterns (e.g., Lights, Triangles, Spheres).
+    3. Exclude redundant or empty posts.
+    
+    Raw NUFORC Data:
+    {feed_data}
+    """
+    
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt,
+    )
+    return response.text
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install google-genai
-
-      - name: Run UFO Fetcher & Gemini Summarizer
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          python fetch_and_summarize.py
-          echo "=================== DAILY UAP DIGEST ==================="
-          cat ufo_daily_digest.md || true
-          echo "========================================================"
+if __name__ == "__main__":
+    raw_data = fetch_nuforc_feed()
+    summary = generate_summary(raw_data)
+    
+    with open("ufo_daily_digest.md", "w", encoding="utf-8") as f:
+        f.write(summary)
